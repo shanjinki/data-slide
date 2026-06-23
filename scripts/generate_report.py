@@ -181,6 +181,8 @@ def read_any_table(input_path: Path, sheet: str | None = None):
 def infer_default_style(domain: str) -> str:
     if domain == "devops-demand-pool":
         return "command-center"
+    if domain == "sales-order-fulfillment":
+        return "ops-ledger"
     if domain in {"ecommerce-orders", "ecommerce-reviews"}:
         return "retail-pulse"
     if domain == "erp-inventory":
@@ -388,6 +390,60 @@ def time_trend_rows(
     return rows
 
 
+def first_existing(columns: list[str], aliases: list[str]) -> str | None:
+    return find_col(columns, aliases)
+
+
+def status_contains(series: "pd.Series", tokens: list[str]) -> "pd.Series":
+    pattern = "|".join(re.escape(normalized_text(token)) for token in tokens)
+    normalized = series.fillna("").astype(str).map(normalized_text)
+    return normalized.str.contains(pattern, regex=True, na=False)
+
+
+def status_distribution_rows(frame: "pd.DataFrame", col: str | None, total: int) -> list[dict[str, Any]]:
+    if not col or col not in frame:
+        return []
+    return value_counts_rows(frame[col], total)
+
+
+def completion_count(series: "pd.Series", done_tokens: list[str]) -> int:
+    return int(status_contains(series, done_tokens).sum())
+
+
+def sales_order_trend_rows(
+    frame: "pd.DataFrame", date_col: str | None, amount_col: str | None, limit: int = 14
+) -> list[dict[str, Any]]:
+    dates = parse_datetime_series(frame, date_col)
+    if dates.dropna().empty:
+        return []
+    values = numeric_series(frame, amount_col) if amount_col else pd.Series([1] * len(frame), index=frame.index)
+    trend_frame = pd.DataFrame({"date": dates, "value": values}).dropna(subset=["date"])
+    if trend_frame.empty:
+        return []
+    span_days = max((trend_frame["date"].max() - trend_frame["date"].min()).days, 0)
+    freq = "D" if span_days <= 90 else "ME"
+    grouped = (
+        trend_frame.set_index("date")
+        .groupby(pd.Grouper(freq=freq))["value"]
+        .agg(["sum", "count"])
+        .dropna()
+        .tail(limit)
+    )
+    rows = []
+    for date, row in grouped.iterrows():
+        if int(row["count"]) <= 0:
+            continue
+        rows.append(
+            {
+                "name": date.strftime("%m/%d") if freq == "D" else date.strftime("%Y-%m"),
+                "value": round(float(row["sum"]), 2),
+                "share": 0,
+                "detail": f"{int(row['count'])} 张订单",
+            }
+        )
+    return rows
+
+
 def table_section(title: str, columns: list[dict[str, str]], rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {"kind": "table", "title": title, "columns": columns, "rows": rows}
 
@@ -398,6 +454,381 @@ def bars_section(title: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 def cards_section(title: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {"kind": "cards", "title": title, "rows": rows}
+
+
+def build_sales_order_report(
+    frame: "pd.DataFrame", profile: dict[str, Any], requirement: str, title: str | None
+) -> dict[str, Any]:
+    """Generate a CRM/ERP sales order, shipment, invoice, and collection report."""
+    if frame.empty or len(frame.columns) == 0:
+        return build_empty_report(profile, requirement, title, "销售订单")
+
+    columns = list(frame.columns)
+    order_col = find_col(columns, ["销售订单号", "订单编号", "订单号", "单据编号", "单据号", "编号", "order id", "order no"])
+    date_col = find_col(columns, ["单据日期", "订单日期", "销售日期", "下单日期", "创建日期", "日期"])
+    customer_col = find_col(columns, ["客户", "客户名称", "购买客户", "订货客户", "account"])
+    settlement_customer_col = find_col(columns, ["结算客户", "付款客户", "开票客户", "收款客户"])
+    owner_col = find_col(columns, ["销售员", "业务员", "客户经理", "销售负责人", "负责人", "owner"])
+    audit_col = find_col(columns, ["审核状态", "审批状态"])
+    execution_col = find_col(columns, ["执行状态", "订单执行状态"])
+    shipment_col = find_col(columns, ["出库状态", "发货状态", "交付状态", "配送状态"])
+    line_shipment_col = find_col(columns, ["行出库状态", "明细出库状态", "行发货状态"])
+    close_col = find_col(columns, ["关闭状态", "订单关闭状态"])
+    collection_col = find_col(columns, ["订单收款状态", "收款状态", "回款状态", "付款状态"])
+    advance_status_col = find_col(columns, ["累计预收状态", "预收状态"])
+    invoice_col = find_col(columns, ["开票状态", "发票状态"])
+    line_invoice_col = find_col(columns, ["行开票状态", "明细开票状态"])
+    amount_col = find_metric_col(columns, ["成交金额", "订单金额", "销售金额", "合同金额", "价税合计", "含税金额", "金额"])
+    received_col = find_metric_col(columns, ["发票已收款金额", "已收款金额", "回款金额", "实收金额", "收款金额"])
+    outstanding_col = find_metric_col(columns, ["订单未收款金额", "未收款金额", "未回款金额", "应收余额", "欠款金额", "应收金额"])
+    advance_col = find_metric_col(columns, ["累计预收", "预收款", "预收金额"])
+    product_col = find_col(columns, ["商品名称", "商品", "产品名称", "物料名称", "品名"])
+    sku_col = find_col(columns, ["商品编码", "物料编码", "SKU", "产品编码"])
+    quantity_col = find_metric_col(columns, ["数量", "订单数量", "销售数量", "出库数量"])
+    line_amount_col = find_metric_col(columns, ["结算金额", "行金额", "明细金额", "价税合计", "含税金额"])
+    unit_price_col = find_metric_col(columns, ["含税单价", "单价", "销售单价"])
+    tax_col = find_metric_col(columns, ["税额", "税金"])
+
+    working = frame.copy()
+    header_cols = [
+        order_col,
+        date_col,
+        customer_col,
+        settlement_customer_col,
+        owner_col,
+        audit_col,
+        execution_col,
+        shipment_col,
+        close_col,
+        collection_col,
+        advance_status_col,
+        invoice_col,
+        amount_col,
+        received_col,
+        outstanding_col,
+        advance_col,
+    ]
+    if order_col and order_col in working:
+        working[order_col] = working[order_col].ffill()
+        for col in [c for c in header_cols if c and c in working and c != order_col]:
+            working[col] = working.groupby(order_col, sort=False)[col].ffill()
+
+    if order_col and order_col in working:
+        order_records = (
+            working[working[order_col].notna()]
+            .groupby(order_col, sort=False, dropna=True)
+            .first()
+            .reset_index()
+        )
+    else:
+        order_records = working.reset_index(drop=True).copy()
+        order_col = None
+
+    order_count = len(order_records)
+    line_count = len(working)
+
+    def order_numeric(col: str | None) -> "pd.Series":
+        series = numeric_series(order_records, col)
+        if len(series) == len(order_records):
+            return series.reset_index(drop=True)
+        return pd.Series([math.nan] * len(order_records), index=order_records.index, dtype="float64")
+
+    amount = order_numeric(amount_col)
+    received = order_numeric(received_col)
+    outstanding = order_numeric(outstanding_col)
+    advance = order_numeric(advance_col)
+    if amount.notna().any():
+        if received.notna().any() or outstanding.notna().any():
+            amount = amount.fillna(received.fillna(0) + outstanding.fillna(0))
+    elif received.notna().any() or outstanding.notna().any():
+        amount = received.fillna(0) + outstanding.fillna(0)
+    if not outstanding.notna().any() and amount.notna().any() and received.notna().any():
+        outstanding = (amount.fillna(0) - received.fillna(0)).clip(lower=0)
+
+    positive_received = received.clip(lower=0)
+    positive_outstanding = outstanding.clip(lower=0)
+    collection_base = positive_received.fillna(0) + positive_outstanding.fillna(0)
+    total_amount = float(amount.sum(skipna=True)) if amount.notna().any() else 0.0
+    total_received = float(positive_received.sum(skipna=True)) if received.notna().any() else 0.0
+    total_outstanding = float(positive_outstanding.sum(skipna=True)) if outstanding.notna().any() else 0.0
+    total_collection_base = float(collection_base.sum(skipna=True))
+    total_advance = float(advance.sum(skipna=True)) if advance.notna().any() else 0.0
+    collection_rate = pct(total_received, total_collection_base or total_amount)
+
+    shipped_count = completion_count(text_series(order_records, shipment_col, ""), ["全部出库", "已出库", "已发货", "已交付", "完成", "delivered", "shipped"])
+    partially_shipped = int(status_contains(text_series(order_records, shipment_col, ""), ["部分出库", "部分发货", "部分交付", "partial"]).sum()) if shipment_col else 0
+    unshipped_count = int(status_contains(text_series(order_records, shipment_col, ""), ["未出库", "未发货", "未交付", "未执行"]).sum()) if shipment_col else 0
+    invoiced_count = completion_count(text_series(order_records, invoice_col, ""), ["全部开票", "已开票", "完成", "invoiced"])
+    partially_invoiced = int(status_contains(text_series(order_records, invoice_col, ""), ["部分开票", "partial"]).sum()) if invoice_col else 0
+    collected_count = completion_count(text_series(order_records, collection_col, ""), ["全部收款", "已收款", "已回款", "完成", "paid"])
+    partially_collected = int(status_contains(text_series(order_records, collection_col, ""), ["部分收款", "部分回款", "partial"]).sum()) if collection_col else 0
+    unaudited_count = int(status_contains(text_series(order_records, audit_col, ""), ["未审核", "未审批", "待审核"]).sum()) if audit_col else 0
+
+    kpis = [
+        make_kpi("销售订单", compact_number(order_count), f"商品/明细行 {compact_number(line_count)}", "blue"),
+        make_kpi("成交金额", compact_number(total_amount), f"已收 {compact_number(total_received)}", "green"),
+        make_kpi("回款率", f"{collection_rate}%", f"未收 {compact_number(total_outstanding)}", "red" if total_outstanding > total_amount * 0.3 else "orange"),
+        make_kpi("发货完成率", f"{pct(shipped_count, order_count)}%", f"未/部分发货 {unshipped_count + partially_shipped} 单", "red" if unshipped_count else "cyan"),
+        make_kpi("开票完成率", f"{pct(invoiced_count, order_count)}%", f"部分开票 {partially_invoiced} 单", "orange"),
+    ]
+
+    lifecycle_rows = [
+        {"name": "已审核", "value": order_count - unaudited_count, "share": pct(order_count - unaudited_count, order_count), "detail": f"未审核 {unaudited_count} 单"},
+        {"name": "已全部执行", "value": completion_count(text_series(order_records, execution_col, ""), ["全部执行", "已执行", "完成", "done"]), "share": pct(completion_count(text_series(order_records, execution_col, ""), ["全部执行", "已执行", "完成", "done"]), order_count), "detail": f"执行字段：{execution_col or '未识别'}"},
+        {"name": "已全部出库/发货", "value": shipped_count, "share": pct(shipped_count, order_count), "detail": f"部分 {partially_shipped}，未发 {unshipped_count}"},
+        {"name": "已全部开票", "value": invoiced_count, "share": pct(invoiced_count, order_count), "detail": f"部分开票 {partially_invoiced}"},
+        {"name": "已全部收款", "value": collected_count, "share": pct(collected_count, order_count), "detail": f"部分收款 {partially_collected}"},
+        {"name": "已关闭", "value": completion_count(text_series(order_records, close_col, ""), ["已关闭", "全部关闭", "完成", "closed"]), "share": pct(completion_count(text_series(order_records, close_col, ""), ["已关闭", "全部关闭", "完成", "closed"]), order_count), "detail": f"关闭字段：{close_col or '未识别'}"},
+    ]
+
+    customer_col_for_group = settlement_customer_col or customer_col
+    customer_amount_rows = []
+    customer_risk_rows = []
+    if customer_col_for_group and customer_col_for_group in order_records:
+        customer_frame = pd.DataFrame(
+            {
+                "customer": text_series(order_records, customer_col_for_group, "未识别客户"),
+                "amount": amount,
+                "received": positive_received,
+                "outstanding": positive_outstanding,
+            }
+        )
+        grouped = customer_frame.groupby("customer").agg(
+            amount=("amount", "sum"),
+            received=("received", "sum"),
+            outstanding=("outstanding", "sum"),
+            orders=("customer", "count"),
+        )
+        total_customer_amount = float(grouped["amount"].sum()) if not grouped.empty else 0.0
+        for name, row in grouped.sort_values("amount", ascending=False).head(8).iterrows():
+            customer_amount_rows.append(
+                {
+                    "name": str(name),
+                    "value": round(float(row["amount"]), 2),
+                    "share": pct(float(row["amount"]), total_customer_amount),
+                    "detail": f"{int(row['orders'])} 单，未收 {compact_number(row['outstanding'])}",
+                }
+            )
+        total_customer_outstanding = float(grouped["outstanding"].clip(lower=0).sum()) if not grouped.empty else 0.0
+        for name, row in grouped[grouped["outstanding"] > 0].sort_values("outstanding", ascending=False).head(8).iterrows():
+            customer_risk_rows.append(
+                {
+                    "name": str(name),
+                    "value": round(float(row["outstanding"]), 2),
+                    "share": pct(float(row["outstanding"]), total_customer_outstanding),
+                    "detail": f"{int(row['orders'])} 单，回款率 {pct(float(row['received']), float(row['received']) + float(row['outstanding']))}%",
+                }
+            )
+
+    product_rows = []
+    product_key = product_col or sku_col
+    if product_key and product_key in working:
+        line_amount = numeric_series(working, line_amount_col)
+        quantity = numeric_series(working, quantity_col)
+        if not line_amount.notna().any() and unit_price_col:
+            line_amount = quantity.fillna(0) * numeric_series(working, unit_price_col).fillna(0)
+        metric = line_amount if line_amount.notna().any() and float(line_amount.sum(skipna=True)) else quantity
+        metric_name = "金额" if line_amount.notna().any() and float(line_amount.sum(skipna=True)) else "数量"
+        product_frame = pd.DataFrame(
+            {
+                "product": text_series(working, product_key, "未识别商品"),
+                "metric": metric,
+                "quantity": quantity,
+            }
+        ).dropna(subset=["metric"])
+        grouped = product_frame.groupby("product").agg(metric=("metric", "sum"), quantity=("quantity", "sum"), lines=("product", "count"))
+        total_metric = float(grouped["metric"].sum()) if not grouped.empty else 0.0
+        for name, row in grouped.sort_values("metric", ascending=False).head(8).iterrows():
+            product_rows.append(
+                {
+                    "name": str(name),
+                    "value": round(float(row["metric"]), 2),
+                    "share": pct(float(row["metric"]), total_metric),
+                    "detail": f"{metric_name}贡献；数量 {compact_number(row['quantity'])}，{int(row['lines'])} 行",
+                }
+            )
+
+    trend_rows = sales_order_trend_rows(order_records, date_col, amount_col)
+    shipment_rows = status_distribution_rows(order_records, shipment_col, order_count)
+    collection_rows = status_distribution_rows(order_records, collection_col, order_count)
+    invoice_rows = status_distribution_rows(order_records, invoice_col, order_count)
+
+    exception_rows = []
+    enriched_orders = order_records.copy()
+    enriched_orders["_amount"] = amount
+    enriched_orders["_received"] = received
+    enriched_orders["_outstanding"] = outstanding
+    for idx, row in enriched_orders.iterrows():
+        reasons = []
+        if audit_col and "未" in str(row.get(audit_col, "")):
+            reasons.append("未审核")
+        if shipment_col and any(token in normalized_text(row.get(shipment_col, "")) for token in ["未出库", "部分出库", "未发货", "部分发货"]):
+            reasons.append("发货未完成")
+        if invoice_col and any(token in normalized_text(row.get(invoice_col, "")) for token in ["未开票", "部分开票"]):
+            reasons.append("开票未完成")
+        if collection_col and any(token in normalized_text(row.get(collection_col, "")) for token in ["未收款", "部分收款", "未回款", "部分回款"]):
+            reasons.append("回款未完成")
+        if pd.notna(row.get("_outstanding")) and row.get("_outstanding") > 0:
+            reasons.append("存在未收款")
+        if pd.notna(row.get("_outstanding")) and row.get("_outstanding") < 0:
+            reasons.append("未收款为负需核对")
+        if not reasons:
+            continue
+        exception_rows.append(
+            {
+                "order": str(row.get(order_col, f"第 {idx + 1} 行"))[:80] if order_col else f"第 {idx + 1} 行",
+                "date": str(row.get(date_col, ""))[:20] if date_col else "",
+                "customer": str(row.get(customer_col_for_group, ""))[:80] if customer_col_for_group else "",
+                "amount": compact_number(row.get("_amount")),
+                "outstanding": compact_number(row.get("_outstanding")),
+                "shipment": str(row.get(shipment_col, ""))[:40] if shipment_col else "",
+                "collection": str(row.get(collection_col, ""))[:40] if collection_col else "",
+                "reason": "、".join(dict.fromkeys(reasons)),
+            }
+        )
+    exception_rows.sort(key=lambda item: parse_number(item["outstanding"]) or 0, reverse=True)
+
+    insights = []
+    if customer_amount_rows:
+        top = customer_amount_rows[0]
+        insights.append(f"「{top['name']}」贡献成交金额 {compact_number(top['value'])}，占比 {top['share']}%，是当前最大客户/结算客户。")
+    if total_outstanding:
+        insights.append(f"未收款金额 {compact_number(total_outstanding)}，占可识别回款口径 {pct(total_outstanding, total_collection_base or total_amount)}%，需要按客户和订单建立回款跟进清单。")
+    if unshipped_count or partially_shipped:
+        insights.append(f"{unshipped_count + partially_shipped} 单尚未全部出库/发货，可能影响交付确认和后续回款。")
+    if invoiced_count < order_count and invoice_col:
+        insights.append(f"未全部开票订单 {order_count - invoiced_count} 单，开票进度会影响应收确认和收款节奏。")
+    if product_rows:
+        insights.append(f"商品/物料「{product_rows[0]['name']}」贡献最高，{product_rows[0]['detail']}。")
+    while len(insights) < 4:
+        insights.append("销售订单报告已按订单、发货、开票、回款和客户应收形成管理层复盘视图。")
+
+    risks = []
+    if total_outstanding >= max(1, total_amount * 0.3):
+        risks.append(
+            {
+                "level": "high",
+                "title": "未收款金额占比较高",
+                "detail": f"未收款 {compact_number(total_outstanding)}，占可识别回款口径 {pct(total_outstanding, total_collection_base or total_amount)}%。",
+                "action": "按客户列出应收责任人、预计回款日和阻塞原因，优先跟进大额未收订单。",
+            }
+        )
+    if unshipped_count or partially_shipped:
+        risks.append(
+            {
+                "level": "medium",
+                "title": "发货/出库未闭环",
+                "detail": f"未全部出库/发货订单 {unshipped_count + partially_shipped} 单。",
+                "action": "销售、仓库和计划协同确认缺货、待排产、待审核或客户原因，避免影响收入确认。",
+            }
+        )
+    if invoice_col and invoiced_count < order_count:
+        risks.append(
+            {
+                "level": "medium",
+                "title": "开票进度滞后",
+                "detail": f"未全部开票订单 {order_count - invoiced_count} 单。",
+                "action": "拆分未开票原因，优先处理已发货但未开票、已收款但未开票的订单。",
+            }
+        )
+    if unaudited_count:
+        risks.append(
+            {
+                "level": "medium",
+                "title": "订单审核未完成",
+                "detail": f"未审核订单 {unaudited_count} 单。",
+                "action": "审核未完成订单不应进入正式交付和回款预测，需补齐审批责任人和时限。",
+            }
+        )
+    negative_outstanding = int((outstanding < 0).sum()) if outstanding.notna().any() else 0
+    if negative_outstanding:
+        risks.append(
+            {
+                "level": "low",
+                "title": "未收款金额存在负数",
+                "detail": f"{negative_outstanding} 单未收款金额为负，可能是预收、红冲或数据口径问题。",
+                "action": "财务需核对负数记录的业务含义，避免回款率和应收余额失真。",
+            }
+        )
+    if total_amount and total_collection_base and abs(total_collection_base - total_amount) / max(abs(total_amount), 1) >= 0.15:
+        risks.append(
+            {
+                "level": "low",
+                "title": "成交与回款口径不完全一致",
+                "detail": f"成交金额 {compact_number(total_amount)}，已收+未收口径 {compact_number(total_collection_base)}。",
+                "action": "确认成交金额、发票已收款金额、订单未收款金额是否来自同一口径，必要时在正式汇报中标注。",
+            }
+        )
+    if customer_amount_rows and customer_amount_rows[0]["share"] >= 50:
+        risks.append(
+            {
+                "level": "medium",
+                "title": "客户贡献集中",
+                "detail": f"最大客户/结算客户贡献 {customer_amount_rows[0]['share']}% 成交金额。",
+                "action": "评估客户集中度、账期和交付风险，避免单一客户波动影响整体业绩。",
+            }
+        )
+    if not risks:
+        risks.append(
+            {
+                "level": "low",
+                "title": "订单履约风险可控",
+                "detail": "按已识别字段看，发货、开票和回款没有出现明显红灯。",
+                "action": "继续补充计划发货日、账期、回款到期日和销售负责人字段，提升下一版风险预测。",
+            }
+        )
+
+    return {
+        "domain": "sales-order-fulfillment",
+        "title": title or "销售订单履约与回款分析报告",
+        "subtitle": requirement or "从 CRM/ERP 销售订单导出表自动生成的管理层汇报",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "source": profile["source"],
+        "sheet": profile.get("sheet"),
+        "kpis": kpis,
+        "insights": insights[:6],
+        "risks": risks[:8],
+        "assumptions": [
+            f"订单字段：{order_col or '未识别，按明细行近似'}",
+            f"客户字段：{customer_col_for_group or '未识别'}",
+            f"金额字段：{amount_col or '未识别'}",
+            f"回款字段：{received_col or '未识别'}；未收款字段：{outstanding_col or '未识别'}",
+            f"发货/出库字段：{shipment_col or line_shipment_col or '未识别'}",
+            f"开票字段：{invoice_col or line_invoice_col or '未识别'}",
+            f"订单头字段为空的明细行已按上一张订单向下补齐，用于处理 ERP 多行商品导出。",
+        ],
+        "analysis_sections": [
+            bars_section("订单履约闭环", lifecycle_rows),
+            bars_section("订单金额趋势", trend_rows),
+            bars_section("客户成交贡献", customer_amount_rows),
+            bars_section("客户应收/未回款排行", customer_risk_rows),
+            bars_section("商品/物料贡献", product_rows),
+            bars_section("出库/发货状态分布", shipment_rows),
+            bars_section("收款状态分布", collection_rows),
+            bars_section("开票状态分布", invoice_rows),
+            table_section(
+                "异常订单明细",
+                [
+                    {"key": "order", "label": "订单"},
+                    {"key": "date", "label": "日期"},
+                    {"key": "customer", "label": "客户"},
+                    {"key": "amount", "label": "成交金额"},
+                    {"key": "outstanding", "label": "未收款"},
+                    {"key": "shipment", "label": "出库/发货"},
+                    {"key": "collection", "label": "收款"},
+                    {"key": "reason", "label": "原因"},
+                ],
+                exception_rows[:12],
+            ),
+        ],
+        "order_count": order_count,
+        "line_count": line_count,
+        "total_amount": total_amount,
+        "total_received": total_received,
+        "total_outstanding": total_outstanding,
+        "total_advance": total_advance,
+        "profile": profile,
+    }
 
 
 def build_devops_report(
@@ -2226,6 +2657,8 @@ def choose_report(
     frame: "pd.DataFrame", profile: dict[str, Any], requirement: str, title: str | None
 ) -> dict[str, Any]:
     domain = profile["inferred_domain"]["domain"]
+    if domain == "sales-order-fulfillment":
+        return build_sales_order_report(frame, profile, requirement, title)
     if domain == "devops-demand-pool":
         return build_devops_report(frame, profile, requirement, title)
     if domain in {"ecommerce-orders", "ecommerce-reviews"}:

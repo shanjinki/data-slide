@@ -15,8 +15,8 @@ The DevOps demand-pool report in `examples/` is only one concrete scenario. This
 - Output: a polished standalone HTML report with inline CSS/JS, no build step, no frontend framework, and no external chart library.
 - Default result: executive summary, KPI cards, visual analysis sections, charts or chart-like components, key insights, risks/opportunities, and action recommendations.
 - Primary objective: reduce repeated style-tuning conversations. The first report should already look presentable.
-- Built-in analyzers: DevOps/project demands, ecommerce orders, finance/performance, CRM pipeline, inventory/procurement, support tickets, HR/attendance/performance, and survey/review feedback. Use these before falling back to the generic table analyzer.
-- Visual promise: six runnable visual systems plus an 18-template direction pack for stronger agent-led refinement. Do not claim that all 18 template directions are separate CLI style values.
+- Built-in analyzers: DevOps/project demands, ecommerce orders, CRM/ERP sales orders with shipment/invoice/collection, finance/performance, CRM pipeline, inventory/procurement, support tickets, HR/attendance/performance, and survey/review feedback. Use these before falling back to the generic table analyzer.
+- Visual promise: six runnable visual systems plus a 19-template direction pack for stronger agent-led refinement. Do not claim that all 19 template directions are separate CLI style values.
 - Differentiation goal: reduce multi-turn report tuning by providing deterministic metrics, domain modules, visual rails, and a quality checklist before the agent writes custom refinements.
 
 ## Non-Negotiables
@@ -83,13 +83,14 @@ Pick or combine blueprints based on the data signals:
 
 - ecommerce orders/reviews
 - CRM leads/opportunities
+- CRM/ERP sales orders, shipment, invoice, collection, and receivables
 - ERP inventory/procurement
 - DevOps or project demand lists
 - survey/offline collection
 - finance/operations trackers
 - generic business table
 
-The blueprint decides the report modules, not just the labels. Example: an order export needs revenue/refund/product/channel analysis; a demand list needs lifecycle/backlog/owner risk; a survey needs distribution, segments, verbatims, and recommendations.
+The blueprint decides the report modules, not just the labels. Example: an ecommerce order export needs GMV/refund/product/channel analysis; a CRM/ERP sales order export needs order lifecycle, shipment, invoice, collection, receivables, and exception analysis; a demand list needs lifecycle/backlog/owner risk; a survey needs distribution, segments, verbatims, and recommendations.
 
 ### 4. Choose The Visual System
 
@@ -123,7 +124,7 @@ The script must produce a directly usable first report, not merely a data profil
 - Add safe excerpts only when useful and privacy-appropriate.
 - Tighten chart labels and recommendation language.
 
-If the selected blueprint has a built-in analyzer, verify that the report contains the domain modules available from the data. Do not deliver a generic profile page for finance, CRM, inventory/procurement, support tickets, HR, feedback/review, ecommerce order, or DevOps demand data.
+If the selected blueprint has a built-in analyzer, verify that the report contains the domain modules available from the data. Do not deliver a generic profile page for finance, CRM pipeline, CRM/ERP sales orders, inventory/procurement, support tickets, HR, feedback/review, ecommerce order, or DevOps demand data.
 
 ### 6. Check Completeness
 

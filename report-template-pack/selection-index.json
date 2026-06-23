@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "pack_name": "excel-to-html-slides Template Pack",
-  "template_count": 18,
+  "template_count": 19,
   "usage": {
     "selection": "Read this compact index first to shortlist report templates from metadata.",
     "previews": "Read only the preview_md files for the shortlisted candidates.",
@@ -63,6 +63,17 @@
       "best_for": "CRM lead/opportunity exports, sales pipeline reviews, forecast meetings.",
       "avoid_for": "Post-sale order or support-ticket datasets.",
       "preview_md": "report-template-pack/templates/crm-pipeline-radar/preview.md"
+    },
+    {
+      "slug": "sales-order-cashflow-bridge",
+      "name": "Sales Order Cashflow Bridge",
+      "tagline": "Order-to-cash report for CRM/ERP sales orders, shipment, invoicing, collections, and receivables.",
+      "domains": ["sales-order-fulfillment", "erp-sales-orders", "order-to-cash", "receivables"],
+      "style": "ops-ledger",
+      "density": "high",
+      "best_for": "ERP sales order exports, CRM order lists, shipment and collection reviews, receivables follow-up meetings.",
+      "avoid_for": "Consumer ecommerce reports where refund, channel, campaign, or platform growth is the primary question.",
+      "preview_md": "report-template-pack/templates/sales-order-cashflow-bridge/preview.md"
     },
     {
       "slug": "inventory-risk-ledger",

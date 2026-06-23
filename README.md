@@ -4,7 +4,7 @@
 >
 > 把企业里导出的 Excel/CSV 表格，变成可以直接拿去汇报的单文件 HTML 汇报材料。
 
-[Demand demo](examples/sample_demand_report.html) · [Finance demo](examples/sample_finance_report.html) · [CRM demo](examples/sample_crm_report.html) · [Inventory demo](examples/sample_inventory_report.html) · [Support demo](examples/sample_support_report.html) · [HR demo](examples/sample_hr_report.html) · [Feedback demo](examples/sample_feedback_report.html)
+[Demand demo](examples/sample_demand_report.html) · [Finance demo](examples/sample_finance_report.html) · [CRM demo](examples/sample_crm_report.html) · [Sales order demo](examples/sample_sales_order_report.html) · [Inventory demo](examples/sample_inventory_report.html) · [Support demo](examples/sample_support_report.html) · [HR demo](examples/sample_hr_report.html) · [Feedback demo](examples/sample_feedback_report.html)
 
 ---
 
@@ -49,7 +49,7 @@ This project exists because direct agent output is unreliable in exactly the pla
 
 | Direct agent generation | `excel-to-html-slides` |
 |---|---|
-| Every report tends to become the same generic AI dashboard | Six runnable visual systems plus an 18-template direction pack |
+| Every report tends to become the same generic AI dashboard | Six runnable visual systems plus a 19-template direction pack |
 | Business metrics can drift between conversations | Deterministic Python analyzers calculate repeatable KPIs |
 | The agent spends tokens rediscovering common CRM/ERP/ecommerce logic | Built-in blueprints encode common exported-table patterns |
 | Style tuning takes many back-and-forth prompts | First output is designed to clear a practical presentation bar |
@@ -64,8 +64,8 @@ The skill is not trying to replace the agent. It gives the agent a better starti
 This is not just a prompt library. The repository ships four reusable assets that reduce multi-turn report tuning:
 
 1. **Deterministic analyzers**: Python code calculates domain KPIs and risk signals for common enterprise exports, so numbers do not drift between conversations.
-2. **Domain blueprints**: CRM, ERP, finance, ecommerce, support, HR, survey, DevOps, and generic-table report modules are pre-defined instead of rediscovered from scratch.
-3. **Visual rails**: six runnable design systems and 18 template directions keep the first report away from the generic AI dashboard look.
+2. **Domain blueprints**: CRM, ERP sales orders, finance, ecommerce, support, HR, survey, DevOps, and generic-table report modules are pre-defined instead of rediscovered from scratch.
+3. **Visual rails**: six runnable design systems and 19 template directions keep the first report away from the generic AI dashboard look.
 4. **Quality contract**: the skill tells the agent to check row counts, missing fields, assumptions, risk/action cards, and visual completeness before delivery.
 
 For users, that means fewer prompts like "make it prettier", "add risk analysis", "why is this just a data profile", or "where is the trend chart".
@@ -97,6 +97,7 @@ This is closer to a management briefing page than a raw dashboard export. It can
 | `ecommerce-orders` | Orders, refunds, product sales | GMV, category/channel contribution, refund risk, trends |
 | `finance-expense` | Revenue, expense, budget, reconciliation | revenue/profit, budget variance, entity comparison, loss/debt risk |
 | `crm-pipeline` | Leads, opportunities, follow-up records | pipeline amount, stage funnel, owner ranking, stale deals |
+| `sales-order-fulfillment` | CRM/ERP sales orders, shipment, invoice, collections | order lifecycle, shipment completion, invoice progress, receivables, collection risk |
 | `erp-inventory` | Inventory, procurement, warehouse records | stockout, overstock, supplier concentration, movement trend |
 | `support-tickets` | Tickets, complaints, service cases | volume, resolution rate, SLA risk, agent workload |
 | `hr-attendance` | Attendance, performance, staff operations | department comparison, abnormal attendance, score distribution |
@@ -119,7 +120,7 @@ The runtime generator currently supports six production-ready styles:
 | `editorial-brief` | surveys, research, qualitative feedback | readable, human, insight-led |
 | `data-studio` | generic or exploratory tables | analytical, neutral, transparent |
 
-The `report-template-pack/` adds 18 template directions for agents to choose from when a report needs stronger narrative or visual framing. These are template briefs and selection metadata, not 18 separate runtime CLI styles yet.
+The `report-template-pack/` adds 19 template directions for agents to choose from when a report needs stronger narrative or visual framing. These are template briefs and selection metadata, not 19 separate runtime CLI styles yet.
 
 ---
 
@@ -195,6 +196,7 @@ All examples use synthetic data.
 - [DevOps demand pool report](examples/sample_demand_report.html)
 - [Finance performance report](examples/sample_finance_report.html)
 - [CRM pipeline report](examples/sample_crm_report.html)
+- [CRM/ERP sales order fulfillment report](examples/sample_sales_order_report.html)
 - [Inventory and procurement report](examples/sample_inventory_report.html)
 - [Support ticket report](examples/sample_support_report.html)
 - [HR operations report](examples/sample_hr_report.html)
@@ -224,7 +226,7 @@ python3 scripts/smoke_check.py
 │   ├── quality-bar.md             # delivery checklist
 │   └── html-report-template.md    # HTML architecture contract
 ├── report-template-pack/
-│   ├── selection-index.json       # 18 template directions
+│   ├── selection-index.json       # 19 template directions
 │   └── templates/                 # lightweight preview cards
 ├── examples/                      # synthetic source data and generated reports
 └── tests/                         # smoke tests for key report domains
@@ -235,7 +237,7 @@ python3 scripts/smoke_check.py
 ## Current Boundaries
 
 - The generator handles one primary sheet/table at a time. Multi-sheet workbooks are profiled, but cross-sheet relationship modeling is not yet a full semantic engine.
-- The six CLI styles are fully runnable. The 18 template directions guide agents and future expansion.
+- The six CLI styles are fully runnable. The 19 template directions guide agents and future expansion.
 - The output is HTML briefing material, not an editable PowerPoint file.
 - The project avoids uploading data. Reports are generated locally from local files.
 

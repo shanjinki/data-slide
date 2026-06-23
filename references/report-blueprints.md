@@ -27,6 +27,7 @@ Score a blueprint higher when the table contains the listed field signals.
 | Ecommerce orders | `订单`, `支付金额`, `GMV`, `SKU`, `商品`, `店铺`, `平台`, `退款`, `地区`, `下单时间` |
 | Ecommerce reviews | `评价`, `评分`, `星级`, `评论`, `差评`, `商品`, `门店`, `客服`, `售后` |
 | CRM leads/opportunities | `客户`, `线索`, `商机`, `阶段`, `销售`, `预计金额`, `赢单`, `跟进`, `来源` |
+| CRM/ERP sales order fulfillment | `销售订单`, `单据编号`, `单据日期`, `结算客户`, `审核状态`, `执行状态`, `出库状态`, `订单收款状态`, `开票状态`, `成交金额`, `发票已收款金额`, `订单未收款金额` |
 | ERP inventory/procurement | `物料`, `库存`, `入库`, `出库`, `仓库`, `供应商`, `采购`, `周转`, `缺货` |
 | Finance/expense/reconciliation | `费用`, `成本`, `收入`, `预算`, `实际`, `差异`, `发票`, `付款`, `部门`, `科目` |
 | HR/attendance/performance | `员工`, `部门`, `岗位`, `考勤`, `绩效`, `工时`, `入职`, `离职`, `薪资` |
@@ -103,6 +104,43 @@ Score a blueprint higher when the table contains the listed field signals.
 4. Source/channel quality.
 5. Stale opportunities and no-next-step risks.
 6. Forecast and follow-up recommendations.
+
+## Blueprint: CRM / ERP Sales Order Fulfillment
+
+Use this blueprint for sales order exports from ERP, CRM, OMS, or finance operations systems. Do not treat these as ecommerce order reports unless the table clearly contains consumer platform fields such as shop/platform/refund/campaign. Sales order tables usually need order-to-cash analysis: order approval, execution, shipment, invoice, collection, and receivables.
+
+### Field mapping
+
+- Order ID: `销售订单号`, `订单编号`, `订单号`, `单据编号`, `单据号`
+- Date: `单据日期`, `订单日期`, `销售日期`, `下单日期`
+- Customer/account: `客户`, `客户名称`, `结算客户`, `付款客户`, `开票客户`
+- Owner: `销售员`, `业务员`, `客户经理`, `销售负责人`
+- Approval/execution: `审核状态`, `审批状态`, `执行状态`, `关闭状态`
+- Shipment/delivery: `出库状态`, `发货状态`, `交付状态`, `行出库状态`
+- Invoice: `开票状态`, `行开票状态`, `发票状态`
+- Collection: `订单收款状态`, `收款状态`, `回款状态`, `发票已收款金额`, `累计预收`
+- Receivable: `订单未收款金额`, `未收款金额`, `未回款金额`, `应收余额`, `欠款金额`
+- Product/line: `商品编码`, `商品名称`, `物料编码`, `物料名称`, `数量`, `单价`, `含税单价`, `税额`
+
+### Modules
+
+1. Order count, line count, sales amount, collection rate, shipment completion, invoice completion.
+2. Order lifecycle bridge: approval -> execution -> shipment -> invoice -> collection -> close.
+3. Customer contribution and customer receivables ranking.
+4. Shipment / delivery status distribution.
+5. Invoice and collection status distribution.
+6. Product or material contribution from line rows.
+7. Exception list: unapproved, unshipped, uninvoiced, unpaid, negative receivable, amount/collection mismatch.
+8. Actions: sales follow-up, warehouse delivery, finance invoicing, receivable collection, data reconciliation.
+
+### Insight patterns
+
+- High sales amount + unpaid = collection priority.
+- Shipped but not invoiced = finance process gap.
+- Invoiced or delivered but unpaid = receivable follow-up risk.
+- Unapproved + unshipped = order validity and fulfillment risk.
+- Customer concentration + long unpaid balance = credit exposure risk.
+- Order header fields may be blank on subsequent item rows; fill only within the same order ID, never across orders.
 
 ## Blueprint: ERP Inventory Or Procurement
 

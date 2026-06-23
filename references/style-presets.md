@@ -56,7 +56,7 @@ Best for: ecommerce orders, reviews, campaigns, customer feedback, store/platfor
 
 ## ops-ledger
 
-Best for: ERP, inventory, procurement, warehouse, supply chain, process quality, exception management.
+Best for: ERP, sales order fulfillment, receivables, inventory, procurement, warehouse, supply chain, process quality, exception management.
 
 - Background: charcoal or paper-like ledger.
 - Accent: green, amber, steel blue.
@@ -91,7 +91,7 @@ Best for: generic data exploration, mixed business tables, analytics-first repor
 
 - Leadership + risk: `command-center` or `boardroom-light`.
 - Ecommerce/customer: `retail-pulse`.
-- ERP/supply/warehouse/process: `ops-ledger`.
+- ERP/order-to-cash/supply/warehouse/process: `ops-ledger`.
 - Survey/research/feedback: `editorial-brief`.
 - Unknown/mixed table: `data-studio` for profiling, then switch once the domain is clearer.
 - If the generated report looks generic, revise the visual system before revising small details.
