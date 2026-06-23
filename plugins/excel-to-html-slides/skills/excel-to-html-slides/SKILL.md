@@ -16,7 +16,7 @@ The DevOps demand-pool report in `examples/` is only one concrete scenario. This
 - Default result: executive summary, KPI cards, visual analysis sections, charts or chart-like components, key insights, risks/opportunities, and action recommendations.
 - Primary objective: reduce repeated style-tuning conversations. The first report should already look presentable.
 - Built-in analyzers: DevOps/project demands, ecommerce orders, CRM/ERP sales orders with shipment/invoice/collection, finance/performance, CRM pipeline, inventory/procurement, support tickets, HR/attendance/performance, and survey/review feedback. Use these before falling back to the generic table analyzer.
-- Visual promise: six runnable visual systems plus a 19-template direction pack for stronger agent-led refinement. Do not claim that all 19 template directions are separate CLI style values.
+- Visual promise: 18 runnable visual systems plus a 19-template direction pack for stronger agent-led refinement. Do not claim that all 19 template directions are separate CLI style values.
 - Differentiation goal: reduce multi-turn report tuning by providing deterministic metrics, domain modules, visual rails, and a quality checklist before the agent writes custom refinements.
 
 ## Non-Negotiables
@@ -179,7 +179,7 @@ Generate multiple visual directions:
 mkdir -p .excel-to-html-slides/previews
 python3 scripts/generate_report.py input.xlsx --requirement "..." --style command-center --output .excel-to-html-slides/previews/style-a.html
 python3 scripts/generate_report.py input.xlsx --requirement "..." --style boardroom-light --output .excel-to-html-slides/previews/style-b.html
-python3 scripts/generate_report.py input.xlsx --requirement "..." --style retail-pulse --output .excel-to-html-slides/previews/style-c.html
+python3 scripts/generate_report.py input.xlsx --requirement "..." --style neon-noir --output .excel-to-html-slides/previews/style-c.html
 ```
 
 ## Resource Map

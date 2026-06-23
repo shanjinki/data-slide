@@ -17,6 +17,7 @@ install_skill() {
   cp -R "$ROOT_DIR/scripts" "$dest/scripts"
   cp -R "$ROOT_DIR/references" "$dest/references"
   cp -R "$ROOT_DIR/assets" "$dest/assets"
+  cp -R "$ROOT_DIR/examples" "$dest/examples"
   cp -R "$ROOT_DIR/report-template-pack" "$dest/report-template-pack"
   if [ -d "$ROOT_DIR/agents" ]; then
     cp -R "$ROOT_DIR/agents" "$dest/agents"

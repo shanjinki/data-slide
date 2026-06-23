@@ -49,7 +49,7 @@ This project exists because direct agent output is unreliable in exactly the pla
 
 | Direct agent generation | `excel-to-html-slides` |
 |---|---|
-| Every report tends to become the same generic AI dashboard | Six runnable visual systems plus a 19-template direction pack |
+| Every report tends to become the same generic AI dashboard | 18 runnable visual systems plus a 19-template direction pack |
 | Business metrics can drift between conversations | Deterministic Python analyzers calculate repeatable KPIs |
 | The agent spends tokens rediscovering common CRM/ERP/ecommerce logic | Built-in blueprints encode common exported-table patterns |
 | Style tuning takes many back-and-forth prompts | First output is designed to clear a practical presentation bar |
@@ -65,7 +65,7 @@ This is not just a prompt library. The repository ships four reusable assets tha
 
 1. **Deterministic analyzers**: Python code calculates domain KPIs and risk signals for common enterprise exports, so numbers do not drift between conversations.
 2. **Domain blueprints**: CRM, ERP sales orders, finance, ecommerce, support, HR, survey, DevOps, and generic-table report modules are pre-defined instead of rediscovered from scratch.
-3. **Visual rails**: six runnable design systems and 19 template directions keep the first report away from the generic AI dashboard look.
+3. **Visual rails**: 18 runnable design systems and 19 template directions keep the first report away from the generic AI dashboard look.
 4. **Quality contract**: the skill tells the agent to check row counts, missing fields, assumptions, risk/action cards, and visual completeness before delivery.
 
 For users, that means fewer prompts like "make it prettier", "add risk analysis", "why is this just a data profile", or "where is the trend chart".
@@ -109,7 +109,7 @@ This is closer to a management briefing page than a raw dashboard export. It can
 
 ## Visual System
 
-The runtime generator currently supports six production-ready styles:
+The runtime generator currently supports 18 production-ready styles. The first six are stable business defaults; the rest are stronger signature looks for reports where the first page must not feel like another generic AI dashboard.
 
 | Style | Best for | Feel |
 |---|---|---|
@@ -119,8 +119,20 @@ The runtime generator currently supports six production-ready styles:
 | `ops-ledger` | ERP, procurement, inventory | precise, operational, exception-led |
 | `editorial-brief` | surveys, research, qualitative feedback | readable, human, insight-led |
 | `data-studio` | generic or exploratory tables | analytical, neutral, transparent |
+| `ink-wash` | strategy memo, qualitative synthesis, customer research | paper-like, restrained, editorial |
+| `terminal-green` | technical ops, logs, incident/data audits | dark, monospaced, command-line |
+| `neon-noir` | consumer trends, competitive scans, launch reviews | high-contrast, sharp, nightlife |
+| `swiss-grid` | consulting-style executive pages, KPI briefs | strict grid, clean, poster-like |
+| `blueprint` | process design, delivery planning, project reviews | blueprint grid, structured, systems-oriented |
+| `copper-report` | finance, procurement, manufacturing summaries | warm, grounded, premium ledger |
+| `editorial-red` | board memos, issue briefs, risk narratives | newspaper-like, assertive, high signal |
+| `glass-board` | modern leadership dashboards, cross-team reviews | translucent, polished, cool |
+| `midnight-gold` | executive scorecards, investor-style summaries | dark, premium, ceremonial |
+| `paper-ledger` | finance, reconciliation, offline collection sheets | paper ledger, readable, audit-friendly |
+| `cobalt-grid` | sales ops, pipeline war rooms, performance tracking | cobalt, energetic, grid-led |
+| `highlighter` | workshops, action plans, lightweight decision notes | annotated, direct, marker-like |
 
-The `report-template-pack/` adds 19 template directions for agents to choose from when a report needs stronger narrative or visual framing. These are template briefs and selection metadata, not 19 separate runtime CLI styles yet.
+The `report-template-pack/` adds 19 template directions for agents to choose from when a report needs stronger narrative or visual framing. These are template briefs and selection metadata; the runtime `--style` values above are the directly runnable visual systems.
 
 ---
 
@@ -237,7 +249,7 @@ python3 scripts/smoke_check.py
 ## Current Boundaries
 
 - The generator handles one primary sheet/table at a time. Multi-sheet workbooks are profiled, but cross-sheet relationship modeling is not yet a full semantic engine.
-- The six CLI styles are fully runnable. The 19 template directions guide agents and future expansion.
+- The 18 CLI styles are fully runnable. The 19 template directions guide agents and future expansion.
 - The output is HTML briefing material, not an editable PowerPoint file.
 - The project avoids uploading data. Reports are generated locally from local files.
 
